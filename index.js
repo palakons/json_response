@@ -54,6 +54,10 @@ if (cluster.isMaster) {
             flask_debug: process.env.FLASK_DEBUG || 'false'
         });
     });
+    app.get('/healthcheck',function (req, res) {
+        console.log('Called /healthcheck form User-Agent: ' + JSON.stringify(req.headers,null,2));
+        res.status(200).json(extend({ 'status': 'successful' },req.body));
+    });
     app.post('/update', function (req, res) {
         console.log('Called /update form User-Agent: ' + JSON.stringify(req.headers,null,2));
         res.status(200).json(extend({ 'status': 'successful' },req.body));

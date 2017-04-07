@@ -37,7 +37,9 @@ if (cluster.isMaster) {
     app.use(bodyParser.json({ limit: '5mb' }))
     app.use(express.static('static'));
 
-    var port = process.env.PORT || 443;
+
+
+    var port = process.env.PORT ||3000;
 
     var server = app.listen(port, function () {
         console.log('Server running at http://127.0.0.1:' + port + '/');

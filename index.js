@@ -24,9 +24,9 @@ if (cluster.isMaster) {
     // Code to run if we're in a worker process
 } else {
     var AWS = require('aws-sdk');
-    var ddb = new AWS.DynamoDB();
     AWS.config.region = process.env.REGION || 'us-east-1';//'us-west-2';// 
-
+    var ddb = new AWS.DynamoDB();
+    
     var express = require('express');
     var bodyParser = require('body-parser');
     var app = express();

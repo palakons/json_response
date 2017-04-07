@@ -77,9 +77,10 @@ if (cluster.isMaster) {
             params
             , function (err, data) {
                 if (err) {
-                    return extend({ status: error }, err);
                     console.log('DDB Error: ' + err);
+                    return extend({ status: error }, err);
                 } else {
+                    console.log('Put data OK');
                     return { status: success };
                 }
             });

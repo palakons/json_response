@@ -54,7 +54,7 @@ if (cluster.isMaster) {
             theme: process.env.THEME || 'flatly',
             flask_debug: process.env.FLASK_DEBUG || 'false'
         });*/
-        res.status(200).json(scanDB(ddb, ddbTable));
+        scanDB(ddb, ddbTable,res);
     });
     app.get('/healthcheck', function (req, res) {
         console.log('Called /healthcheck form User-Agent: ' + JSON.stringify(req.headers, null, 2));
@@ -67,7 +67,7 @@ if (cluster.isMaster) {
         status: { S: req.body.status }  };
         res.status(200).json(extend(putinDB(ddb, ddbTable, data), req.body));
     });
-    function scanDB(dDB, ddbTableName){
+    function scanDB(dDB, ddbTableName,res){
         var params = {
             TableName: ddbTableName
         };
@@ -96,10 +96,10 @@ if (cluster.isMaster) {
                     ddb.scan(params, onScan);
                 } else {
                     console.log("Scan done. " + wholeTable.Count + ', ' + wholeTable.Items.length + " items");
+                    res.status(200).json(wholeTable.Items);
                 }
             }
         }
-        return wholeTable.Items;
     }
     function putinDB(dDB, ddbTableName, data) {
 

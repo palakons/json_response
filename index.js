@@ -46,7 +46,8 @@ if (cluster.isMaster) {
     });
 
     app.get('/', function (req, res) {
-        console.log('Called form User-Agent: ' + req.headers['user-agent']);
+        //console.log('Called form User-Agent: ' + req.headers['user-agent']);
+        console.log('Called / form User-Agent: ' + JSON.stringify(req.headers,null,2));
         res.render('index', {
             static_path: 'static',
             theme: process.env.THEME || 'flatly',
@@ -54,6 +55,7 @@ if (cluster.isMaster) {
         });
     });
     app.post('/update', function (req, res) {
+        console.log('Called /update form User-Agent: ' + JSON.stringify(req.headers,null,2));
         res.status(200).json(extend({ 'status': 'successful' },req.body));
     });
 }

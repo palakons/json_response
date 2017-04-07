@@ -49,11 +49,12 @@ if (cluster.isMaster) {
     app.get('/', function (req, res) {
         //console.log('Called form User-Agent: ' + req.headers['user-agent']);
         console.log('Called / form User-Agent: ' + JSON.stringify(req.headers, null, 2));
-        res.render('index', {
+        /*res.render('index', {
             static_path: 'static',
             theme: process.env.THEME || 'flatly',
             flask_debug: process.env.FLASK_DEBUG || 'false'
-        });
+        });*/
+        res.status(200).json(scanDB(ddb, ddbTable));
     });
     app.get('/healthcheck', function (req, res) {
         console.log('Called /healthcheck form User-Agent: ' + JSON.stringify(req.headers, null, 2));
@@ -66,6 +67,40 @@ if (cluster.isMaster) {
         status: { S: req.body.status }  };
         res.status(200).json(extend(putinDB(ddb, ddbTable, data), req.body));
     });
+    function scanDB(dDB, ddbTableName){
+        var params = {
+            TableName: ddbTableName
+        };
+        console.log("Scanning table.");
+        var wholeTable = {
+            Count: 0,
+            Items: [],
+            ScannedCount: 0
+        };
+        dDB.scan(params, onScan);
+        function onScan(err, data) {
+            if (err) {
+                console.error("Unable to scan the table. Error JSON:", JSON.stringify(err, null, 2));
+            } else {
+                console.log("Scan succeeded.");
+                wholeTable = {
+                    Count: wholeTable.Count + data.Count,
+                    Items: wholeTable.Items.concat(data.Items),
+                    ScannedCount: wholeTable.ScannedCount + data.ScannedCount
+                }
+                // continue scanning if we have more movies, because
+                // scan can retrieve a maximum of 1MB of data
+                if (typeof data.LastEvaluatedKey != "undefined") {
+                    console.log("Scanning for more...");
+                    params.ExclusiveStartKey = data.LastEvaluatedKey;
+                    ddb.scan(params, onScan);
+                } else {
+                    console.log("Scan done. " + wholeTable.Count + ', ' + wholeTable.Items.length + " items");
+                }
+            }
+        }
+        return wholeTable.Items;
+    }
     function putinDB(dDB, ddbTableName, data) {
 
         var params = {

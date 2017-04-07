@@ -24,9 +24,11 @@ if (cluster.isMaster) {
     // Code to run if we're in a worker process
 } else {
     var AWS = require('aws-sdk');
-    AWS.config.region = process.env.REGION || 'us-east-1';//'us-west-2';// 
+    var DOC = require("dynamodb-doc");
+    AWS.config.region = process.env.REGION || 'us-east-1';
+    var docClient = new DOC.DynamoDB();
     var ddb = new AWS.DynamoDB();
-    
+
     var express = require('express');
     var bodyParser = require('body-parser');
     var app = express();
@@ -54,7 +56,7 @@ if (cluster.isMaster) {
             theme: process.env.THEME || 'flatly',
             flask_debug: process.env.FLASK_DEBUG || 'false'
         });*/
-        scanDB(ddb, ddbTable,res);
+        scanDB(ddb, ddbTable, res);
     });
     app.get('/healthcheck', function (req, res) {
         console.log('Called /healthcheck form User-Agent: ' + JSON.stringify(req.headers, null, 2));
@@ -62,12 +64,63 @@ if (cluster.isMaster) {
     });
     app.post('/update', function (req, res) {
         console.log('Called /update form User-Agent: ' + JSON.stringify(req.headers, null, 2));
-        var data = { time_ms: { N: Date.now().toString()}, 
-        cpu_id: { S: req.body.id }, 
-        status: { S: req.body.status }  };
+        var data = {
+            time_ms: { N: Date.now().toString() },
+            cpu_id: { S: req.body.id },
+            status: { S: req.body.status }
+        };
         res.status(200).json(extend(putinDB(ddb, ddbTable, data), req.body));
     });
-    function scanDB(dDB, ddbTableName,res){
+
+    app.get('/testDocClient', function (req, res) {
+        console.log('Called /testDocClient from User-Agent: ' + JSON.stringify(req.headers, null, 2));
+        // Basic Scalar Datatypes
+        /*var params = {};
+        params.TableName = "chronos-palakons";
+        params.Item = {
+            UserId: "John",
+            time_ms: 21,
+            Pic: docClient.StrToBin("someURI")
+        };
+
+        */var params = {};
+        params.TableName = "chronos-palakons";
+
+        // Compatible is a Map of Part to List of PartId's
+        // OnSale is a BOOL type
+        // Discount is a NULL type
+        params.Item = {
+            time_ms: 22,
+            PartId: "CPU1",
+            OnSale: false,
+            Discount: null,
+            Compatible: {
+                Motherboards: ["MB1", "MB2"],
+                RAM: ["RAM1"]
+            }
+        };
+        docClient.putItem(params, pfunc);
+
+
+        params = {};
+        params.TableName = "chronos-palakons";
+        params.Key = { time_ms: 22 }
+
+        docClient.getItem(params, pfunc);
+
+        res.status(200).json({ status: 'success' });
+    });
+
+    // Basic Callback
+    var pfunc = function (err, data) {
+        if (err) {
+            console.log(err, err.stack);
+        } else {
+            console.log(JSON.stringify(data, null, 2));
+        }
+    }
+    //Scan is BAD
+    function scanDB(dDB, ddbTableName, res) {
         var params = {
             TableName: ddbTableName
         };
@@ -107,13 +160,13 @@ if (cluster.isMaster) {
             'TableName': ddbTableName,
             'Item': data
         };
-        console.log('Data to in put: ',JSON.stringify(params, null, 2));
+        console.log('Data to in put: ', JSON.stringify(params, null, 2));
         dDB.putItem(
             params
             , function (err, data) {
                 if (err) {
                     console.log('DDB Error: ' + err);
-                    return extend({ status: 'error'}, err);
+                    return extend({ status: 'error' }, err);
                 } else {
                     console.log('Put data OK');
                     return { status: 'success' };

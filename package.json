@@ -4,14 +4,15 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "ejs": "latest",
     "aws-sdk": "2.28.0",
+    "body-parser": "latest",
+    "dynamodb-doc": "^1.0.0",
+    "ejs": "latest",
     "express": "latest",
-    "url": "latest",
+    "extend": "latest",
     "http": "latest",
     "https": "latest",
-    "extend": "latest",
-    "body-parser": "latest"
+    "url": "latest"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

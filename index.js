@@ -61,7 +61,7 @@ if (cluster.isMaster) {
     });
     app.post('/update', function (req, res) {
         console.log('Called /update form User-Agent: ' + JSON.stringify(req.headers, null, 2));
-        var data = { time_ms: { N: Date.now()}, 
+        var data = { time_ms: { N: Date.now().toString()}, 
         cpu_id: { S: req.body.id }, 
         status: { S: req.body.status }  };
         res.status(200).json(extend(putinDB(ddb, ddbTable, data), req.body));

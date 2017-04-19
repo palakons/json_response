@@ -1,0 +1,281 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+	<input id="number" type="number" min="0" max="1024" placeholder="Input a number" />
+	<button id="random" type="button">Random</button>
+	<p>Before the script...</p>
+	<canvas id="canvas" width="300" height="300"></canvas>
+	<canvas id="canvas2" width="300" height="300"></canvas>
+
+
+
+	<script>
+		var parkingSpot = {
+			parking_spot_id: "",
+			status: "",
+			physical_serial_label: "",
+			parking_patch_id: "",
+			order_in_patch: "",
+		};
+		var parkingPatch = {
+			parking_patch_id: "",
+			latitude: .00001 * 40 / 2 * (1 / 4 + 2.5 / 4) - .0000135,
+			longitude: .00001 * 54 / 2 / 4 - .00001,
+			elevation: "0",
+			theta: "90",
+			phi: "0",
+			alpha: "0",
+			width: "2.5", // m
+			length: "12.5", //m
+			number_of_slots_by_the_length: "9",
+			offset_angle: "20",
+			offset_length: "0",
+			parking_floor_id: "",
+			parkingSpots: [parkingSpot],
+		};
+		var mapImage = {
+			floor_map_image_id: "",
+			url: "http://www.ananda.co.th/condo/ashton/ashton-asoke/building/a/image/master-floor.png",//'https://upload.wikimedia.org/wikipedia/commons/b/bb/Angle_parking_lot_diagram.PNG',
+			top_left_latitude: "0",
+			top_left_longitude: "0",
+			bottom_right_latitude: .00001 * 40 / 2,
+			bottom_right_longitude: .00001 * 54 / 2,
+			center_latitude: "0",
+			center_longitude: "0",
+			pixPerMeter: 10,
+			bearing: 0,
+		};
+		var floor = {
+			parking_floor_id: "",
+			title: "",
+			floor: "",
+			parkade_id: "",
+			floor_map_image_id: "",
+			mapImage: mapImage,
+			parkingPatches: [parkingPatch],
+		};
+
+
+		drawFloor(floor, 'canvas2');
+		function drawFloor(floor, canvasId) {
+			var slotMap = new Image();
+			var canvas = document.getElementById(canvasId);
+			function init() {
+				slotMap.src = floor.mapImage.url;
+				slotMap.onload = function () {
+					canvas.width = slotMap.width;
+					canvas.height = slotMap.height;
+					console.log(slotMap.width, slotMap.height)
+				}
+
+				window.requestAnimationFrame(draw);
+			}
+			function draw() {
+				var ctx = canvas.getContext('2d');
+
+				ctx.globalCompositeOperation = 'destination-over';
+				ctx.clearRect(0, 0, 300, 300); // clear canvas
+
+				ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+				ctx.strokeStyle = 'rgba(0, 153, 255, 0.4)';
+
+				drawPatch(ctx, floor.parkingPatches, floor.mapImage);
+
+				ctx.drawImage(slotMap, 0, 0);
+				ctx.save();
+				window.requestAnimationFrame(draw);
+			}
+			function pixelPerMeter(mapImage, imWidth, imHeight) {
+				/*top_left_latitude: "0",
+			top_left_longitude: "0",
+			bottom_right_latitude: "2",
+			bottom_right_longitude: "2",*/
+				var pixelDistance = Math.sqrt(imWidth * imWidth + imHeight * imHeight);
+				var coordDistanceMeter = haversineDistance(mapImage.top_left_latitude,
+					mapImage.top_left_longitude,
+					mapImage.bottom_right_latitude,
+					mapImage.bottom_right_longitude);
+				return pixelDistance / coordDistanceMeter;
+			}
+			function myStroke(ctx, w1, w2) {
+
+				ctx.strokeStyle = 'rgba(255, 255, 255, 255)';
+				ctx.lineWidth = w2;
+				ctx.stroke();
+				ctx.strokeStyle = 'rgba(25, 25, 25, 70)';
+				ctx.strokeStyle = 'rgba(255, 25, 255, 70)';
+				ctx.lineWidth = w1;
+				ctx.stroke();
+			}
+			function myFill(ctx, status) {
+				var period = 500; //millisec		
+				switch (status) {
+					case 0:
+						ctx.fillStyle = 'rgba(255, 255, 255, 50)';
+						ctx.fill();
+						break;
+					case 1:
+						ctx.fillStyle = 'rgba(255, 255, 255, 127)';
+						if ((new Date()) % period < (period / 2)) {
+							//ctx.fillRect(0, -12, 50, 24); // Shadow
+
+							ctx.fill();
+						}
+						break;
+					case 2:
+						ctx.fillStyle = 'rgba(255, 0, 0, 50)';
+						ctx.fill();
+						break;
+					default:
+						break;
+				}
+
+			}
+			function drawPatch(ctx, patch, mapImage) {
+				var scale = pixelPerMeter(mapImage, slotMap.width, slotMap.height);
+				var xScale = scale;
+				var yScale = scale;
+				//console.log(scale);
+				/*
+
+			latitude: "1",
+			longitude: "1",
+			theta: "30",
+			width: "5", // m
+			length: "20", //m
+			number_of_slots_by_the_length: "10",
+			offset_angle: "45",*/
+
+				for (var i in patch) {
+					ctx.save();
+					//translate
+					ctx.translate(xScale * (haversineDistance(0, mapImage.top_left_longitude, 0, patch[i].longitude)),
+						yScale * (haversineDistance(mapImage.top_left_latitude, 0, patch[i].latitude, 0)));
+
+					//rotate
+					ctx.rotate(-patch[i].theta / 180 * Math.PI);
+
+					//start draw
+					ctx.beginPath();
+					ctx.moveTo(0, 0);
+					ctx.lineTo(xScale * (patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+						yScale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+					ctx.lineTo(xScale * (parseInt(patch[i].length) + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+						yScale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+
+
+					ctx.lineTo(xScale * (patch[i].length), 0);
+					ctx.closePath();
+					//ctx.stroke();
+					myStroke(ctx, 5, 1);
+					var n = patch[i].number_of_slots_by_the_length;
+					for (var j = 1; j < n; j++) {
+
+						ctx.beginPath();
+						ctx.moveTo(xScale * (j / n * patch[i].length), yScale * (0));
+						ctx.lineTo(xScale * (j / n * patch[i].length + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+							yScale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+						//ctx.stroke();
+						myStroke(ctx, 5, 1);
+					}
+
+					for (var j = 1; j <= n; j++) { //draw each spot
+
+						ctx.beginPath();
+						ctx.moveTo(xScale * (j / n * patch[i].length),
+							yScale * (0));
+						ctx.lineTo(xScale * (j / n * patch[i].length + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+							yScale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+						ctx.lineTo(xScale * ((j - 1) / n * patch[i].length + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+							yScale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI))); ctx.lineTo(xScale * ((j - 1) / n * patch[i].length),
+								yScale * (0));
+
+						ctx.closePath();
+						myFill(ctx, j == 1 ? 1 : j == n ? 2 : 3);
+					}
+
+					ctx.restore();
+				}
+			}
+			init();
+
+		}
+		function haversineDistance(lat1, lon1, lat2, lon2) { //angles in degree
+			try {
+				var R = 6371e3; // metres
+				var phi1 = lat1 * Math.PI / 180;
+				var phi2 = lat2 * Math.PI / 180;
+				var deltaPhi = (lat2 - lat1) * Math.PI / 180;
+				var deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+				var a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+					Math.cos(phi1) * Math.cos(phi2) *
+					Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+				var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+				var d = R * c;
+				//console.log(lat1, lon1, lat2, lon2,R, phi1, phi2, deltaPhi, deltaLambda, a, c, d);
+			} catch (e) {
+				console.log("Error: ", e);
+			}
+			return d;
+		}
+		testAnimate();
+
+		function testAnimate() {
+			var sun = new Image();
+			var moon = new Image();
+			var earth = new Image();
+			function init() {
+				sun.src = 'https://mdn.mozillademos.org/files/1456/Canvas_sun.png';
+				moon.src = 'https://mdn.mozillademos.org/files/1443/Canvas_moon.png';
+				earth.src = 'https://mdn.mozillademos.org/files/1429/Canvas_earth.png';
+				window.requestAnimationFrame(draw);
+			}
+
+			function draw() {
+				var ctx = document.getElementById('canvas').getContext('2d');
+
+				ctx.globalCompositeOperation = 'destination-over';
+				ctx.clearRect(0, 0, 300, 300); // clear canvas
+
+				ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+				ctx.strokeStyle = 'rgba(0, 153, 255, 0.4)';
+				ctx.save();
+				ctx.translate(150, 150);
+
+				// Earth
+				var time = new Date();
+				ctx.rotate(((2 * Math.PI) / 60) * time.getSeconds() + ((2 * Math.PI) / 60000) * time.getMilliseconds());
+				ctx.translate(105, 0);
+				ctx.fillRect(0, -12, 50, 24); // Shadow
+				ctx.drawImage(earth, -12, -12);
+
+				// Moon
+				ctx.save();
+				ctx.rotate(((2 * Math.PI) / 6) * time.getSeconds() + ((2 * Math.PI) / 6000) * time.getMilliseconds());
+				ctx.translate(0, 28.5);
+				ctx.drawImage(moon, -3.5, -3.5);
+				ctx.restore();
+
+				ctx.restore();
+
+				ctx.beginPath();
+				ctx.arc(150, 150, 105, 0, Math.PI * 2, false); // Earth orbit
+				ctx.stroke();
+
+				ctx.drawImage(sun, 0, 0, 300, 300);
+
+				window.requestAnimationFrame(draw);
+			}
+
+			init();
+		}
+	</script>
+
+	<p>...After the script.</p>
+
+</body>
+
+</html>

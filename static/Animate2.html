@@ -1,0 +1,352 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+	<input id="number" type="number" min="0" max="1024" placeholder="Input a number" />
+	<button id="random" type="button">Random</button>
+	<p>Before the script...</p>
+	<canvas id="canvas" width="300" height="300"></canvas>
+
+
+
+	<script>
+		var parkingSpot = {
+			parking_spot_id: "",
+			status: "",
+			physical_serial_label: "",
+			parking_patch_id: "",
+			order_in_patch: "",
+		};
+		var parkingPatch = {
+			parking_patch_id: "",
+			latitude: 13.739215731339197 + m2Deg(-.29),
+			longitude: 100.56085735559464 + m2Deg(0),
+			elevation: "0",
+			theta: -84,
+			phi: "0",
+			alpha: "0",
+			width: "5", // m
+			length: "7.5", //m
+			number_of_slots_by_the_length: "3",
+			offset_angle: 0,
+			parking_floor_id: "",
+			parkingSpots: [parkingSpot],
+		};
+
+		var parkingPatch2 = {
+			parking_patch_id: "",
+			latitude: 13.739416351858535,
+			longitude: 100.56088417768478 + m2Deg(.85),
+			elevation: "0",
+			theta: -84 + 90,
+			phi: "0",
+			alpha: "0",
+			width: "5", // m
+			length: "7.5", //m
+			number_of_slots_by_the_length: "3",
+			offset_angle: 0,
+			parking_floor_id: "",
+			parkingSpots: [parkingSpot],
+		};
+
+
+		var parkingPatch3 = {
+			parking_patch_id: "",
+			latitude: 13.739375967222333,
+			longitude: 100.56103840470314,
+			elevation: "0",
+			theta: -84 + 180,
+			phi: "0",
+			alpha: "0",
+			width: "5", // m
+			length: 5, //m
+			number_of_slots_by_the_length: 2,
+			offset_angle: 0,
+			parking_floor_id: "",
+			parkingSpots: [parkingSpot],
+		};
+
+
+		var parkingPatch4 = {
+			parking_patch_id: "",
+			latitude: 13.739088063646568 + m2Deg(-.1),
+			longitude: 100.56100755929947,
+			elevation: "0",
+			theta: -84 + 180,
+			phi: "0",
+			alpha: "0",
+			width: "5", // m
+			length: 5, //m
+			number_of_slots_by_the_length: 2,
+			offset_angle: 0,
+			parking_floor_id: "",
+			parkingSpots: [parkingSpot],
+		};
+
+		var pPatch = [];
+		for (var i = 1; i < 6; i++) {
+			pPatch.push({
+				parking_patch_id: "",
+				latitude: 13.73908716 + (13.73937597 - 13.73908716) * i / 6,
+				longitude: 100.5610076 + (100.5610384 - 100.5610076) * i / 6,
+				elevation: "0",
+				theta: -84 + 180,
+				phi: "0",
+				alpha: "0",
+				width: "5", // m
+				length: 5, //m
+				number_of_slots_by_the_length: 2,
+				offset_angle: 0,
+				parking_floor_id: "",
+				parkingSpots: [parkingSpot],
+			});
+		}
+
+
+		var mapImage = {
+			floor_map_image_id: "",
+			url: "./master-floor.png",
+
+			/*top_left_latitude: "0",
+			top_left_longitude: "0",
+			bottom_right_latitude: .00001 * 40 / 2,
+			bottom_right_longitude: .00001 * 54 / 2,*/
+
+			center_latitude: 13.738883272086257,
+			center_longitude: 100.56115252956917,
+			pixelPerMeter: 0.5 / 0.09065750491789616,
+			bearing: -84,
+		};
+
+		console.log(parkingPatch4, parkingPatch3);
+		var floor = {
+			parking_floor_id: "",
+			title: "",
+			floor: "",
+			parkade_id: "",
+			floor_map_image_id: "",
+			mapImage: mapImage,
+			parkingPatches: [parkingPatch, parkingPatch2, parkingPatch3, parkingPatch4].concat(pPatch),
+		};
+
+		function m2Deg(d) {
+			var D = 12744000;
+			return 360 * d / (2 * Math.PI * D / 2);
+
+		}
+		function deg2M(deg) {
+			var D = 12744000;
+			return deg * (2 * Math.PI * D / 2) / 360;
+
+		}
+
+		drawFloor(floor, 'canvas');
+
+		function drawFloor(floor, canvasId) {
+			var slotMap = new Image();
+			var canvas = document.getElementById(canvasId);
+			init();
+
+			function init() {
+				slotMap.src = floor.mapImage.url;
+				slotMap.onload = function () {
+					canvas.width = slotMap.width;
+					canvas.height = slotMap.height;
+					console.log(slotMap.width, slotMap.height)
+				}
+
+				window.requestAnimationFrame(draw);
+			}
+			function draw() {
+				var ctx = canvas.getContext('2d');
+
+				ctx.globalCompositeOperation = 'destination-over';
+				ctx.clearRect(0, 0, canvas.width, canvas.height); // clear canvas
+
+				ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+				ctx.strokeStyle = 'rgba(0, 153, 255, 0.4)';
+
+				drawPatch(canvas, floor.parkingPatches, floor.mapImage);
+
+				ctx.drawImage(slotMap, 0, 0);
+				//ctx.save();
+				window.requestAnimationFrame(draw);
+			}
+
+			function myStroke(ctx, thickW, thinW) {
+
+				//ctx.strokeStyle = 'rgba(255, 255, 255, 255)';
+				//ctx.lineWidth = thickW;
+				//ctx.stroke();
+				ctx.strokeStyle = 'rgba(25, 25, 25, 70)';
+				ctx.lineWidth = thinW;
+				ctx.stroke();
+			}
+			function myFill(ctx, status) {
+				var period = 500; //millisec		
+				switch (status) {
+					case 0:
+						ctx.fillStyle = 'rgba(255, 255, 255, 50)';
+						ctx.fill();
+						break;
+					case 1:
+						var millisec = Date.now();
+						ctx.fillStyle = 'rgba(255, 100, 100, 127)';
+						if (millisec % period < (period / 2)) {
+							//ctx.fillRect(0, -12, 50, 24); // Shadow
+							//console.log('y');
+
+							ctx.fill();
+						} else {
+							//console.log('n');
+						}
+						break;
+					case 2:
+						ctx.fillStyle = 'rgba(255, 0, 0, 50)';
+						ctx.fill();
+						break;
+					default:
+						break;
+				}
+
+			}
+			function drawPatch(canvas, patch, mapImage) {
+				var ctx = canvas.getContext('2d');
+				var scale = mapImage.pixelPerMeter;
+				//console.log(scale);
+				/*
+
+			latitude: "1",
+			longitude: "1",
+			theta: "30",
+			width: "5", // m
+			length: "20", //m
+			number_of_slots_by_the_length: "10",
+			offset_angle: "45",
+			
+			
+			center_latitude: 13.738883272086257,
+			center_longitude: 100.56115252956917,
+			pixelPerMeter: 0.5 / 0.09065750491789616,
+			bearing: -84,*/
+
+				for (var i in patch) {
+					ctx.save();
+					//translate
+					//rotate
+					ctx.translate(canvas.width / 2, canvas.height / 2);
+					ctx.rotate(- mapImage.bearing / 180 * Math.PI);
+
+					ctx.beginPath();
+					ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+					ctx.stroke();
+
+					ctx.beginPath();
+					ctx.moveTo(0, 0);
+					ctx.lineTo(200, 0);
+					ctx.stroke();
+
+					ctx.translate(mapImage.pixelPerMeter * deg2M(patch[i].longitude - mapImage.center_longitude),
+						mapImage.pixelPerMeter * -deg2M(patch[i].latitude - mapImage.center_latitude));
+					ctx.rotate(patch[i].theta / 180 * Math.PI);
+
+					ctx.rect(- mapImage.pixelPerMeter * patch[i].width / 2, -mapImage.pixelPerMeter * patch[i].length / 2, mapImage.pixelPerMeter * patch[i].width, mapImage.pixelPerMeter * patch[i].length);
+					ctx.stroke();
+
+					ctx.beginPath();
+					ctx.arc(0, 0, 5, 0, 2 * Math.PI);
+					ctx.stroke();
+
+					ctx.beginPath();
+					ctx.moveTo(0, 0);
+					ctx.lineTo(200, 0);
+					ctx.stroke();
+
+
+					ctx.translate(mapImage.pixelPerMeter * -patch[i].length / 2,
+						mapImage.pixelPerMeter * -patch[i].width / 2);
+
+					//start draw
+					/*ctx.beginPath();
+					ctx.moveTo(0, 0);
+					ctx.lineTo(scale * (patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+						scale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+					ctx.lineTo(scale * (parseInt(patch[i].length) + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+						scale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+
+
+					ctx.lineTo(scale * (patch[i].length), 0);
+					ctx.closePath();
+					//ctx.stroke();
+					myStroke(ctx, 5, 1);*/
+
+					var n = patch[i].number_of_slots_by_the_length;
+					/*for (var j = 1; j < n; j++) {
+
+						ctx.beginPath();
+						ctx.moveTo(scale * (j / n * patch[i].length), scale * (0));
+						ctx.lineTo(scale * (j / n * patch[i].length + patch[i].width * Math.sin(patch[i].offset_angle / 180 * Math.PI)),
+							scale * (patch[i].width * Math.cos(patch[i].offset_angle / 180 * Math.PI)));
+						//ctx.stroke();
+						myStroke(ctx, 5, 1);
+					}*/
+
+					for (var j = 0; j < n; j++) { //draw each spot
+
+						drawSpot(ctx, scale * (j / n * patch[i].length),
+							scale * patch[i].length / n,
+							scale * patch[i].width,
+							patch[i].offset_angle,
+							2, 1);
+						//2, j == 1 ? 1 : j == n ? 2 : 3);
+					}
+					ctx.restore();
+
+				}
+			}
+
+			function drawSpot(ctx, pos, width, length, deg, offset, fill_status) {
+				if (width > 2 * offset && length > 2 * offset) {
+					ctx.beginPath();
+					ctx.moveTo(pos + offset * (1 + Math.sin(deg / 180 * Math.PI)),
+						offset);
+					ctx.lineTo(pos + offset + (length - offset) * Math.sin(deg / 180 * Math.PI),
+						length * Math.cos(deg / 180 * Math.PI) - offset);
+					ctx.lineTo(pos + width - offset + (length - offset) * Math.sin(deg / 180 * Math.PI),
+						length * Math.cos(deg / 180 * Math.PI) - offset);
+
+					ctx.lineTo(pos + width - offset * (1 - Math.sin(deg / 180 * Math.PI)),
+						offset);
+					ctx.closePath();
+					myFill(ctx, fill_status);
+				}
+			}
+
+		}
+		function haversineDistance(lat1, lon1, lat2, lon2) { //angles in degree
+			try {
+				var R = 6371e3; // metres
+				var phi1 = lat1 * Math.PI / 180;
+				var phi2 = lat2 * Math.PI / 180;
+				var deltaPhi = (lat2 - lat1) * Math.PI / 180;
+				var deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+				var a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+					Math.cos(phi1) * Math.cos(phi2) *
+					Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+				var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+				var d = R * c;
+				//console.log(lat1, lon1, lat2, lon2,R, phi1, phi2, deltaPhi, deltaLambda, a, c, d);
+			} catch (e) {
+				console.log("Error: ", e);
+			}
+			return d;
+		}
+	</script>
+
+	<p>...After the script.</p>
+
+</body>
+
+</html>

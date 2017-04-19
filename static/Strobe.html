@@ -1,0 +1,91 @@
+<!DOCTYPE HTML>
+<html>
+
+<body>
+	<input id="number" type="number" min="0" max="1024" placeholder="Input a number" />
+	<button id="random" type="button">Random</button>
+	<p>Before the script...</p>
+
+
+
+	<script>
+		function calcCRC(dataStr, type) {
+			if (type == 1) {
+				var c = 0;
+				for (var i = 0; i < dataStr.length; i++) {
+					if (dataStr.charAt(i) == '1')
+						c++;
+				}
+				return (c + 2).toString(2);
+			} else if (type == 2) { //3 bit crc not more than 60 bits
+				//long number = Long.parseLong(dataStr, 2) << 3;
+
+				var polyStr = "10101";
+				number = parseInt(dataStr, 2) << (polyStr.length-1);
+				//long poly = Long.parseLong("1011", 2);
+				poly = parseInt(polyStr, 2);
+				var n = (polyStr.length-1)-1;
+				while ((1 << ++n) < number);
+				while (n >= (polyStr.length-1)) {
+					if (((1 << n) & number) > 0) {
+						number ^= poly << (n - (polyStr.length-1));
+					}
+					n--;
+				}
+				var output = (number & ((1<<(polyStr.length-1))-1)).toString(2);
+				return "0".repeat(polyStr.length).substr(output.length) + output;
+			} else {
+				return dataStr.length.toString(2);
+			}
+		}
+		function genCodeC(n = 10, msg) {
+			//var num = Math.floor((Math.random() * (1 << n)) + 1);
+			num = msg;
+			var data = num.toString(2).substr(0, n);
+			var padding = "0".repeat(n - data.length);
+			var prec = "11111";
+			var str = prec + padding + data;
+			var c = 0;
+			var crc = calcCRC(padding + data, 2);
+			console.log(msg,prec , padding + data,crc);
+			return str + crc;
+		}
+		//var str = "010100000000011010";
+		var num = 259;
+		var str = genCodeC(10, num);
+		var hz = 10;
+		var i = 0;
+		//console.log(num, str);
+		//console.log(calcCRC("11010011101100", 2));
+		//console.log(calcCRC("11010011101100100", 2));
+		window.setInterval(function () {
+			i++
+			if (str.charAt(i % str.length) == '1') {
+				document.body.style.backgroundColor = "white";
+			} else {
+				document.body.style.backgroundColor = "black";
+			}
+		}, 1000 / hz);
+
+		//document.addEventListener("load", function () {
+		document.getElementById("number").addEventListener("keypress", function (event) {
+			if (event.keyCode === 13) {
+				num = parseInt(document.getElementById("number").value) % 1024;
+				str = genCodeC(10, num);
+				//console.log(num, str);
+			}
+		});
+
+		document.getElementById("random").addEventListener("click", function () {
+			document.getElementById("number").value = num = Math.ceil(Math.random() * 1024);
+			str = genCodeC(10, num);
+			//console.log(num, str);
+		});
+		//});
+	</script>
+
+	<p>...After the script.</p>
+
+</body>
+
+</html>

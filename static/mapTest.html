@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Adding a Custom Overlay</title>
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+        
+        #map {
+            height: 100%;
+        }
+        /* Optional: Makes the sample page fill the window. */
+        
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        #floating-panel {
+            position: absolute;
+            top: 10px;
+            left: 25%;
+            z-index: 5;
+            background-color: #fff;
+            padding: 5px;
+            border: 1px solid #999;
+            text-align: center;
+            font-family: 'Roboto', 'sans-serif';
+            line-height: 30px;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="floating-panel">
+        <input onclick="resize(1.05);" type=button value="+ size">
+        <input onclick="resize(.95);" type=button value="- size">
+        <input onclick="opacity(1.1);" type=button value="+ opacity">
+        <input onclick="opacity(.9);" type=button value="- opacity">
+        <input onclick="print();" type=button value="print">
+        <input type="checkbox" id="checkMove" checked> Move Image
+    </div>
+    <div id="map"></div>
+
+    <canvas id="canvas" width="300" height="300" hidden></canvas>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAEDBbp-Yrv2Y31X3VS4WzBSo_z2jiViKs"></script>
+    <script>
+        // This example creates a custom overlay called USGSOverlay, containing
+        // a U.S. Geological Survey (USGS) image of the relevant area on the map.
+
+        // Set the custom overlay object's prototype to a new instance
+        // of OverlayView. In effect, this will subclass the overlay class therefore
+        // it's simpler to load the API synchronously, using
+        // google.maps.event.addDomListener().
+        // Note that we set the prototype to an instance, rather than the
+        // parent class itself, because we do not wish to modify the parent class.
+
+        var overlay;
+        var map;
+        var srcImage;
+
+        var angle = -84;
+
+        var ew_offset_meter = 0;
+        var ns_offset_meter = 0;
+        var lat_org = 13.738883272086257;
+        var long_org = 100.56115252956917;
+
+        var scale = 0.09065750491789616;
+        var ew_scale_meter = 0;//640 * scale;
+        var ns_scale_meter = 0;//473 * scale;
+        srcImage = "./master-floor.png";
+        //srcImage = "http://thinkofliving.com/wp-content/uploads/2015/06/Map-%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%9A%E0%B8%97%E0%B9%82%E0%B8%84%E0%B8%95%E0%B8%A3%E0%B8%8B%E0%B8%B9%E0%B8%A1-Ashton1.jpg";
+
+
+        getImage(srcImage);
+        /*var ew_offset_meter = 0;
+                var ns_offset_meter = 0;
+                var lat_org = 13.731101988896613;
+                var long_org = 100.5310870266367;
+        
+                var scale = 0.26620000000000005;
+                var ew_scale_meter = 640 * scale;
+                var ns_scale_meter = 473 * scale;
+                srcImage = "http://thinkofliving.com/wp-content/uploads/2015/06/Map-%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%9A%E0%B8%97%E0%B9%82%E0%B8%84%E0%B8%95%E0%B8%A3%E0%B8%8B%E0%B8%B9%E0%B8%A1-Ashton1.jpg";
+        */
+
+        USGSOverlay.prototype = new google.maps.OverlayView();
+
+        // Initialize the map and the custom overlay.
+
+
+        function initMap() {
+            console.log("initmap");
+
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 20,
+                center: { lat: lat_org + m2Deg(ns_offset_meter), lng: long_org + m2Deg(ew_offset_meter) },
+                mapTypeId: 'satellite',
+
+            });
+
+
+
+            var bounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
+
+
+            // The custom USGSOverlay object contains the USGS image,
+            // the bounds of the image, and a reference to the map.
+
+            overlay = new USGSOverlay(bounds, srcImage, map);
+
+
+            map.addListener('dragend', function () {
+                
+                var isChecked = document.getElementById("checkMove").checked;
+                if(isChecked){
+                var newCenter = map.getCenter();
+                console.log(newCenter.lat(), newCenter.lng());
+                ew_offset_meter = 0;
+                ns_offset_meter = 0;
+                lat_org = newCenter.lat();
+                long_org = newCenter.lng();
+                var bounds = new google.maps.LatLngBounds(
+                    new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
+                    new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
+                overlay.setMap(null);
+                overlay = new USGSOverlay(bounds, srcImage, map);
+                }
+            });
+            //Add listener
+            map.addListener( "click", function (event) {
+                var latitude = event.latLng.lat();
+                var longitude = event.latLng.lng();
+                console.log("click lat long" ,latitude + ', ' + longitude);
+            }); //end addListener
+        }
+
+        function m2Deg(d) {
+            var D = 12744000;
+            return 360 * d / (2 * Math.PI * D / 2);
+
+        }
+        function resize(factor) {
+            var canvas = document.getElementById('canvas');
+            scale *= factor;
+            ew_scale_meter = canvas.width * scale;
+            ns_scale_meter = canvas.height * scale;
+            var bounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
+            overlay.setMap(null);
+            overlay = new USGSOverlay(bounds, srcImage, map);
+
+        }
+        function opacity(f) {
+            overlay.div_.style.opacity *= f;
+            if (overlay.div_.style.opacity > 1) overlay.div_.style.opacity = 1;
+            else if (overlay.div_.style.opacity < .01) overlay.div_.style.opacity = .01;
+        }
+        function print() {
+            console.log("lat long 1", lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter),
+                long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter));
+            console.log("lat long 2", lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter),
+                long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter));
+            console.log("latlong org", lat_org, long_org, scale);
+        }
+
+        /** @constructor */
+        function USGSOverlay(bounds, image, map) {
+
+            // Initialize all properties.
+            this.bounds_ = bounds;
+            this.image_ = image;
+            this.map_ = map;
+
+
+            // Define a property to hold the image's div. We'll
+            // actually create this div upon receipt of the onAdd()
+            // method so we'll leave it null for now.
+            this.div_ = null;
+
+            // Explicitly call setMap on this overlay.
+            this.setMap(map);
+        }
+
+        /**
+         * onAdd is called when the map's panes are ready and the overlay has been
+         * added to the map.
+         */
+        USGSOverlay.prototype.onAdd = function () {
+
+            var div = document.createElement('div');
+            div.style.borderStyle = 'none';
+            div.style.borderWidth = '0px';
+            div.style.position = 'absolute';
+
+            // Create the img element and attach it to the div.
+            var img = document.createElement('img');
+            img.src = this.image_;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.position = 'absolute';
+            div.appendChild(img);
+
+            this.div_ = div;
+            this.div_.style.opacity = 0.3;  /* ADDED */
+
+            // Add the element to the "overlayLayer" pane.
+            var panes = this.getPanes();
+            panes.overlayLayer.appendChild(div);
+        };
+
+        USGSOverlay.prototype.draw = function () {
+
+            // We use the south-west and north-east
+            // coordinates of the overlay to peg it to the correct position and size.
+            // To do this, we need to retrieve the projection from the overlay.
+            var overlayProjection = this.getProjection();
+
+            // Retrieve the south-west and north-east coordinates of this overlay
+            // in LatLngs and convert them to pixel coordinates.
+            // We'll use these coordinates to resize the div.
+            var sw = overlayProjection.fromLatLngToDivPixel(this.bounds_.getSouthWest());
+            var ne = overlayProjection.fromLatLngToDivPixel(this.bounds_.getNorthEast());
+
+            // Resize the image's div to fit the indicated dimensions.
+            var div = this.div_;
+            div.style.left = sw.x + 'px';
+            div.style.top = ne.y + 'px';
+            div.style.width = (ne.x - sw.x) + 'px';
+            div.style.height = (sw.y - ne.y) + 'px';
+        };
+
+        // The onRemove() method will be called automatically from the API if
+        // we ever set the overlay's map property to 'null'.
+        USGSOverlay.prototype.onRemove = function () {
+            this.div_.parentNode.removeChild(this.div_);
+            this.div_ = null;
+        };
+
+        //google.maps.event.addDomListener(window, 'load', initMap);
+
+        function getImage(srcURI) {
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var slotMap = new Image();
+            //slotMap.crossOrigin="anonymous";
+
+            slotMap.setAttribute('crossOrigin', 'anonymous');
+            slotMap.src = srcURI;
+            slotMap.onload = function () {
+                var alpha = Math.atan2(slotMap.height, slotMap.width);
+                var r = Math.sqrt(slotMap.height * slotMap.height + slotMap.width * slotMap.width);
+
+                canvas.width = r * Math.max(Math.abs(Math.cos(angle / 180 * Math.PI - alpha)), Math.abs(Math.cos(angle / 180 * Math.PI + alpha)));
+                canvas.height = r * Math.max(Math.abs(Math.sin(angle / 180 * Math.PI - alpha)), Math.abs(Math.sin(angle / 180 * Math.PI + alpha)));
+
+                console.log("r, angle, phi", r, angle, alpha * 180 / Math.PI);
+                console.log("Canvas", canvas.width, canvas.height);
+                console.log("Image", slotMap.width, slotMap.height);
+
+                ew_scale_meter = canvas.width * scale;
+                ns_scale_meter = canvas.height * scale;
+
+                var x = canvas.width / 2;
+                var y = canvas.height / 2;
+                var width = slotMap.width;
+                var height = slotMap.height;
+                var angleInRadians = angle * Math.PI / 180;
+
+                ctx.translate(x, y);
+                ctx.rotate(angleInRadians);
+
+                ctx.drawImage(slotMap, -width / 2, -height / 2, width, height);
+
+                ctx.rotate(-angleInRadians);
+                ctx.translate(-x, -y);
+
+                srcImage = canvas.toDataURL();
+                initMap();
+            }
+        }
+    </script>
+</body>
+
+</html>

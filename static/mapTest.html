@@ -44,7 +44,7 @@
         <input onclick="opacity(1.1);" type=button value="+ opacity">
         <input onclick="opacity(.9);" type=button value="- opacity">
         <input onclick="print();" type=button value="print">
-        <input type="checkbox" id="checkMove" checked> Move Image
+        <input type="checkbox" id="checkMove"> Move Image n: <input type="number" id="nSpots" min="1" value="5">
     </div>
     <div id="map"></div>
 
@@ -65,6 +65,7 @@
         var overlay;
         var map;
         var srcImage;
+        var srcUrl;
 
         var angle = -84;
 
@@ -77,8 +78,8 @@
         var ew_scale_meter = 0;//640 * scale;
         var ns_scale_meter = 0;//473 * scale;
         srcImage = "./master-floor.png";
-        //srcImage = "http://thinkofliving.com/wp-content/uploads/2015/06/Map-%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%9A%E0%B8%97%E0%B9%82%E0%B8%84%E0%B8%95%E0%B8%A3%E0%B8%8B%E0%B8%B9%E0%B8%A1-Ashton1.jpg";
-
+        srcImage = "http://thinkofliving.com/wp-content/uploads/2015/06/Map-%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%9A%E0%B8%97%E0%B9%82%E0%B8%84%E0%B8%95%E0%B8%A3%E0%B8%8B%E0%B8%B9%E0%B8%A1-Ashton1.jpg";
+        srcUrl = srcImage;
 
         getImage(srcImage);
         /*var ew_offset_meter = 0;
@@ -122,27 +123,43 @@
 
 
             map.addListener('dragend', function () {
-                
+
                 var isChecked = document.getElementById("checkMove").checked;
-                if(isChecked){
-                var newCenter = map.getCenter();
-                console.log(newCenter.lat(), newCenter.lng());
-                ew_offset_meter = 0;
-                ns_offset_meter = 0;
-                lat_org = newCenter.lat();
-                long_org = newCenter.lng();
-                var bounds = new google.maps.LatLngBounds(
-                    new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
-                    new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
-                overlay.setMap(null);
-                overlay = new USGSOverlay(bounds, srcImage, map);
+                if (isChecked) {
+                    var newCenter = map.getCenter();
+                    console.log(newCenter.lat(), newCenter.lng());
+                    ew_offset_meter = 0;
+                    ns_offset_meter = 0;
+                    lat_org = newCenter.lat();
+                    long_org = newCenter.lng();
+                    var bounds = new google.maps.LatLngBounds(
+                        new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
+                        new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
+                    overlay.setMap(null);
+                    overlay = new USGSOverlay(bounds, srcImage, map);
                 }
             });
             //Add listener
-            map.addListener( "click", function (event) {
+            map.addListener("click", function (event) {
                 var latitude = event.latLng.lat();
                 var longitude = event.latLng.lng();
-                console.log("click lat long" ,latitude + ', ' + longitude);
+                console.log("click lat long", latitude + ', ' + longitude);
+                var n = parseInt(document.getElementById("nSpots").value);
+                var section = {
+                    parking_patch_id: "",
+                    center_latitude: latitude,
+                    center_longitude: longitude,
+                    elevation: "0",
+                    theta: angle,
+                    phi: "0",
+                    alpha: "0",
+                    width: "5", // m
+                    length: 2.5 * n, //m
+                    number_of_slots_by_the_length: n,
+                    offset_angle: 0,
+                    parking_floor_id: "",
+                };
+                consoel.log(section);
             }); //end addListener
         }
 
@@ -169,11 +186,17 @@
             else if (overlay.div_.style.opacity < .01) overlay.div_.style.opacity = .01;
         }
         function print() {
-            console.log("lat long 1", lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter),
-                long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter));
-            console.log("lat long 2", lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter),
-                long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter));
-            console.log("latlong org", lat_org, long_org, scale);
+
+            var mapImage = {
+                floor_map_image_id: "",
+                url: srcUrl,
+
+                center_latitude: lat_org,
+                center_longitude: long_org,
+                pixelPerMeter: 0.5 / scale,
+                bearing: angle,
+            };
+            console.log(mapImage);
         }
 
         /** @constructor */

@@ -1,17 +1,56 @@
 <!DOCTYPE HTML>
 <html>
 
+<head></head>
+
 <body>
-	<input id="number" type="number" min="0" max="1024" placeholder="Input a number" />
-	<button id="random" type="button">Random</button>
+	<button onclick="console.log(JSON.stringify(floor.parkingPatches,null,2))" type="button">print</button>
+	<input type="number" value=2 id="nSpot">
+	<select id="floorSelect"></select>
 	<p>Before the script...</p>
 	<canvas id="canvas" width="300" height="300"></canvas>
 
 
 	<script src="animate_functions.js"></script>
 	<script>
-		drawFloor(floor, 'canvas');
+		var canvasId = 'canvas';
+		var keyBank = [];
+		var cnv = document.getElementById(canvasId);
+		cnv.addEventListener('click', plotSpot, false);
 
+		initFloorSelect();
+		var xx = document.getElementById("floorSelect");
+		var script = document.createElement("script");
+		script.src = xx.value;
+
+		var head = document.getElementsByTagName("head")[0];
+		head.appendChild(script);
+		script.onload = function () {
+			drawFloor(floor, canvasId);
+		};
+
+		function initFloorSelect() {
+			var fNames = ["master-floor", "ground-floor", "floor-2-8", "floor-9"];
+			var x = document.getElementById("floorSelect");
+			for (var i in fNames) {
+				var option = document.createElement("option");
+				option.text = fNames[i];
+				option.value = "./mockData." + (parseInt(i) + 1) + ".js";
+				x.add(option);
+			}
+			x.addEventListener("change", function () {
+				var xx = document.getElementById("floorSelect");
+				script.remove();
+				script = document.createElement("script");
+				script.src = xx.value;
+
+				var head = document.getElementsByTagName("head")[0];
+				head.appendChild(script);
+				script.onload = function () {
+					drawFloor(floor, canvasId);
+				};
+			});
+		}
 		function drawFloor(floor, canvasId) {
 			var canvas = document.getElementById(canvasId);
 			var slotMap = new Image();
@@ -32,6 +71,78 @@
 				ctx.drawImage(slotMap, 0, 0);
 				window.requestAnimationFrame(draw);
 			}
+		}
+
+		document.body.onkeyup = function (e) {
+			keyBank = keyBank.filter(function (v) {
+				return v != e.key;
+			});
+		}
+		document.body.onkeydown = function (e) {
+			keyBank.push(e.key);
+			console.log(e.key);
+			var data = floor.parkingPatches[floor.parkingPatches.length - 1];
+			if (data != undefined) {
+				//move 5 cm to each dir
+				var dDeg = m2Deg((keyBank.length == 2 && keyBank.indexOf("Shift") > -1) ? .05 : 0.5);
+				var turnAngle = 0;
+				if (e.key == "ArrowUp") {
+					turnAngle = floor.mapImage.bearing;
+				} else if (e.key == "ArrowDown") {
+					turnAngle = floor.mapImage.bearing + 180;
+				} else if (e.key == "ArrowLeft") {
+					turnAngle = floor.mapImage.bearing + 270;
+				} else if (e.key == "ArrowRight") {
+					turnAngle = floor.mapImage.bearing + 90;
+				}
+				if (e.key == "ArrowUp" || e.key == "ArrowDown" || e.key == "ArrowLeft" || e.key == "ArrowRight") {
+					data.center_latitude += dDeg * Math.cos(turnAngle / 180 * Math.PI);
+					data.center_longitude += dDeg * Math.sin(turnAngle / 180 * Math.PI);
+					floor.parkingPatches[floor.parkingPatches.length - 1] = data;
+				}
+			}
+		};
+		function plotSpot(evt) {
+			var cnv = document.getElementById('canvas');
+			console.log("offset", cnv.offsetLeft, cnv.offsetTop);
+			console.log("window", evt.clientX, evt.clientY);
+			console.log("xy", evt.clientX - cnv.offsetLeft, evt.clientY - cnv.offsetTop);
+			var dx = evt.clientX - cnv.offsetLeft + document.body.scrollLeft - cnv.width / 2;
+			var dy = evt.clientY - cnv.offsetTop + document.body.scrollTop - cnv.height / 2;
+
+			var c = document.getElementById("canvas");
+			var ctx = c.getContext("2d");
+			ctx.beginPath();
+			ctx.arc(evt.clientX - c.offsetLeft + document.body.scrollLeft, evt.clientY - c.offsetTop + document.body.scrollTop, 5, 0, 2 * Math.PI);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(evt.clientX, evt.clientY, 5, 0, 2 * Math.PI);
+			ctx.stroke();
+
+			console.log(dx, dy);
+			var d = m2Deg(Math.sqrt(dx * dx + dy * dy) / floor.mapImage.pixelPerMeter); //in degree
+			console.log(Math.sqrt(dx * dx + dy * dy), Math.sqrt(dx * dx + dy * dy) / floor.mapImage.pixelPerMeter, d);
+			var ang = Math.atan2(-dy, dx);
+			var deltaLat = d * Math.sin(ang - floor.mapImage.bearing / 180 * Math.PI);
+			var deltaLong = d * Math.cos(ang - floor.mapImage.bearing / 180 * Math.PI);
+			var spot = document.getElementById("nSpot").value;
+			var newSection = {
+				parking_patch_id: "",
+				center_latitude: floor.mapImage.center_latitude + deltaLat,
+				center_longitude: floor.mapImage.center_longitude + deltaLong,
+				elevation: "0",
+				theta: floor.mapImage.bearing + 90,
+				phi: "0",
+				alpha: "0",
+				width: "5", // m
+				length: spot * 2.5, //m
+				number_of_slots_by_the_length: spot,
+				offset_angle: 0,
+				parking_floor_id: "",
+				parkingSpots: [parkingSpot],
+			};
+			console.log(JSON.stringify(newSection));
+			floor.parkingPatches = floor.parkingPatches.concat([newSection]);
 		}
 	</script>
 

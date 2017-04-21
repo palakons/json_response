@@ -23,8 +23,8 @@
         
         #floating-panel {
             position: absolute;
-            top: 10px;
-            left: 25%;
+            left: 10px;
+            bottom: 25%;
             z-index: 5;
             background-color: #fff;
             padding: 5px;
@@ -44,7 +44,9 @@
         <input onclick="opacity(1.1);" type=button value="+ opacity">
         <input onclick="opacity(.9);" type=button value="- opacity">
         <input onclick="print();" type=button value="print">
-        <input type="checkbox" id="checkMove"> Move Image n: <input type="number" id="nSpots" min="1" value="5">
+        <input type="checkbox" id="checkMove"> Move Image
+        <br/> n: <input type="number" id="nSpots" min="1" value="5" size="4">
+        <select id="fileSelect"></select>
     </div>
     <div id="map"></div>
 
@@ -79,8 +81,10 @@
         var ns_scale_meter = 0;//473 * scale;
         srcImage = "./master-floor.png";
         //srcImage = "http://thinkofliving.com/wp-content/uploads/2015/06/Map-%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%9A%E0%B8%97%E0%B9%82%E0%B8%84%E0%B8%95%E0%B8%A3%E0%B8%8B%E0%B8%B9%E0%B8%A1-Ashton1.jpg";
-        srcUrl = srcImage;
 
+        initSelect();
+        srcImage = updateImgName();
+        srcUrl = srcImage;
         getImage(srcImage);
         /*var ew_offset_meter = 0;
                 var ns_offset_meter = 0;
@@ -97,6 +101,20 @@
 
         // Initialize the map and the custom overlay.
 
+        function updateOverlayImage() {
+            var newCenter = map.getCenter();
+            console.log(newCenter.lat(), newCenter.lng());
+            ew_offset_meter = 0;
+            ns_offset_meter = 0;
+            lat_org = newCenter.lat();
+            long_org = newCenter.lng();
+
+            var bounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
+                new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
+            overlay.setMap(null);
+            overlay = new USGSOverlay(bounds, srcImage, map);
+        }
 
         function initMap() {
             console.log("initmap");
@@ -126,17 +144,7 @@
 
                 var isChecked = document.getElementById("checkMove").checked;
                 if (isChecked) {
-                    var newCenter = map.getCenter();
-                    console.log(newCenter.lat(), newCenter.lng());
-                    ew_offset_meter = 0;
-                    ns_offset_meter = 0;
-                    lat_org = newCenter.lat();
-                    long_org = newCenter.lng();
-                    var bounds = new google.maps.LatLngBounds(
-                        new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) - m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) - m2Deg(ew_scale_meter)),
-                        new google.maps.LatLng(lat_org + m2Deg(ns_offset_meter) + m2Deg(ns_scale_meter), long_org + m2Deg(ew_offset_meter) + m2Deg(ew_scale_meter)));
-                    overlay.setMap(null);
-                    overlay = new USGSOverlay(bounds, srcImage, map);
+                    updateOverlayImage();
                 }
             });
             //Add listener
@@ -159,10 +167,30 @@
                     offset_angle: 0,
                     parking_floor_id: "",
                 };
-                consoel.log(section);
+                console.log(JSON.stringify(section));
             }); //end addListener
         }
-
+        function updateImgName() {
+            var x = document.getElementById("fileSelect");
+            console.log("changed to", x.value);
+            return x.value;
+        }
+        function initSelect() {
+            var fNames = ["master-floor", "ground-floor", "floor-2-8", "floor-9"];
+            var x = document.getElementById("fileSelect");
+            for (var i in fNames) {
+                var option = document.createElement("option");
+                option.text = fNames[i];
+                option.value = "./" + fNames[i] + ".png";
+                x.add(option);
+            }
+            x.addEventListener("change", function () {
+                srcImage = updateImgName();
+                srcUrl = srcImage;
+                //updateOverlayImage();
+                getImage(srcImage);
+            });
+        }
         function m2Deg(d) {
             var D = 12744000;
             return 360 * d / (2 * Math.PI * D / 2);
@@ -237,7 +265,7 @@
             div.appendChild(img);
 
             this.div_ = div;
-            this.div_.style.opacity = 0.3;  /* ADDED */
+            this.div_.style.opacity = 0.6;  /* ADDED */
 
             // Add the element to the "overlayLayer" pane.
             var panes = this.getPanes();

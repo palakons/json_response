@@ -51,7 +51,7 @@ function fillIntensity(pos, period, offset = 0) {
 }
 function drawPatch(canvas, patch, mapImage) {
     var ctx = canvas.getContext('2d');
-    var scale = mapImage.pixelPerMeter;
+    var scale = mapImage.pixel_per_meter;
     //console.log(scale);
     /*
 
@@ -66,7 +66,7 @@ offset_angle: "45",
 	
 center_latitude: 13.738883272086257,
 center_longitude: 100.56115252956917,
-pixelPerMeter: 0.5 / 0.09065750491789616,
+pixel_per_meter: 0.5 / 0.09065750491789616,
 bearing: -84,*/
 
     for (var i in patch) {
@@ -76,17 +76,17 @@ bearing: -84,*/
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(- mapImage.bearing / 180 * Math.PI);
 
-        ctx.translate(mapImage.pixelPerMeter * deg2M(patch[i].center_longitude - mapImage.center_longitude),
-            mapImage.pixelPerMeter * -deg2M(patch[i].center_latitude - mapImage.center_latitude));
+        ctx.translate(mapImage.pixel_per_meter * deg2M(patch[i].center_longitude - mapImage.center_longitude),
+            mapImage.pixel_per_meter * -deg2M(patch[i].center_latitude - mapImage.center_latitude));
         ctx.rotate(patch[i].theta / 180 * Math.PI);
-        ctx.translate(mapImage.pixelPerMeter * -patch[i].length / 2,
-            mapImage.pixelPerMeter * -patch[i].width / 2);
+        ctx.translate(mapImage.pixel_per_meter * -patch[i].length / 2,
+            mapImage.pixel_per_meter * -patch[i].width / 2);
 
         var n = patch[i].number_of_slots_by_the_length;
 
         for (var j = 0; j < n; j++) { //draw each spot
 
-            drawSpot(ctx, scale * (j / n * patch[i].length),
+            drawSpot(ctx, j, scale * (j / n * patch[i].length),
                 scale * patch[i].length / n,
                 scale * patch[i].width,
                 patch[i].offset_angle,
@@ -97,25 +97,36 @@ bearing: -84,*/
     }
 }
 
-function drawSpot(ctx, pos, width, length, deg, offset, fill_status, patch = undefined) {
+function drawSpot(ctx, j, pos, width, length, deg, offset, fill_status, patch = undefined) {
+    var deg2Rad = 1 / 180 * Math.PI;
+    var sinDeg = Math.sin(deg * deg2Rad);
+    var cosDeg = Math.cos(deg * deg2Rad);
     if (width > 2 * offset && length > 2 * offset) {
-        ctx.beginPath();
-        ctx.moveTo(pos + offset * (1 + Math.sin(deg / 180 * Math.PI)),
-            offset);
-        ctx.lineTo(pos + offset + (length - offset) * Math.sin(deg / 180 * Math.PI),
-            length * Math.cos(deg / 180 * Math.PI) - offset);
-        ctx.lineTo(pos + width - offset + (length - offset) * Math.sin(deg / 180 * Math.PI),
-            length * Math.cos(deg / 180 * Math.PI) - offset);
-
-        ctx.lineTo(pos + width - offset * (1 - Math.sin(deg / 180 * Math.PI)),
-            offset);
-        ctx.closePath();
 
         //right top
-        var offset = (patch.center_latitude + patch.center_longitude) /m2Deg(.1);
-
-        myFill(ctx, fill_status, offset);
+        var waveOffset = (patch.center_latitude + patch.center_longitude) / m2Deg(.1);
+        if (patch.parking_spots != undefined && patch.parking_spots[j].parking_sensor != undefined) {
+            //console.log("parking_sensors", patch.parking_spots[j].parking_sensor);
+            if (hwStat[patch.parking_spots[j].parking_sensor.physical_id] == undefined) {
+                hwStat[patch.parking_spots[j].parking_sensor.physical_id] = 0;
+            }
+            fill_status = hwStat[patch.parking_spots[j].parking_sensor.physical_id];
+        }
+        myFill2(pos + offset * (1 + sinDeg), offset,
+            pos + offset + (length - offset) * sinDeg, length * cosDeg - offset,
+            pos + (width - offset) + (length - offset) * sinDeg, length * cosDeg - offset,
+            pos + (width - offset) * (1 - sinDeg), offset,
+            ctx, fill_status, waveOffset);
     }
+}
+function myFill2(a, b, c, d, e, f, g, h, ctx, fill_status, offset) {
+    ctx.beginPath();
+    ctx.moveTo(a, b);
+    ctx.lineTo(c, d);
+    ctx.lineTo(e, f);
+    ctx.lineTo(g, h);
+    ctx.closePath();
+    myFill(ctx, fill_status, offset);
 }
 
 function haversineDistance(lat1, lon1, lat2, lon2) { //angles in degree
@@ -137,4 +148,33 @@ function haversineDistance(lat1, lon1, lat2, lon2) { //angles in degree
         console.log("Error: ", e);
     }
     return d;
+}
+
+function updateTransaction(hwStat) {
+    var keys = JSON.stringify(Object.keys(hwStat));
+    console.log("updateTransaction", keys);
+    var url = "http://ec2-54-89-193-150.compute-1.amazonaws.com:3000/api/parking_activity_transactions/latest";
+    $.ajax({
+        url: url,
+        data: keys,
+        type: "POST",
+        contentType: "application/json",
+        success: function (data, textStatus, jqXHR) {
+            console.log(data.data.parkingActivityTransactions);
+            for (var i in data.data.parkingActivityTransactions) {
+                if (data.data.parkingActivityTransactions[i] != undefined)
+                    hwStat[data.data.parkingActivityTransactions[i].physical_id] = data.data.parkingActivityTransactions[i].status == "Vacant" ? 1 : 2;
+            }
+        }
+    });
+}
+function getFloor(id, callback, canvas) {
+    var url = "http://ec2-54-89-193-150.compute-1.amazonaws.com:3000/api/parking_floors/" + id + "/details";
+    $.get(url,
+        function (floorData) {
+            console.log(floorData);
+            callback(floorData.data.parkingFloors, canvas);
+
+        });
+
 }

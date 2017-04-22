@@ -4,21 +4,24 @@
 <head></head>
 
 <body>
-	<button onclick="console.log(JSON.stringify(floor.parkingPatches,null,2))" type="button">print</button>
+	<button onclick="console.log(JSON.stringify(floor.parking_spot_segments,null,2))" type="button">print</button>
 	<input type="number" value=2 id="nSpot">
 	<select id="floorSelect"></select>
 	<p>Before the script...</p>
 	<canvas id="canvas" width="300" height="300"></canvas>
-
-
+	<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+	 crossorigin="anonymous"></script>
 	<script src="animate_functions.js"></script>
 	<script>
 		var canvasId = 'canvas';
 		var keyBank = [];
 		var cnv = document.getElementById(canvasId);
+		var hwStat = [];
 		cnv.addEventListener('click', plotSpot, false);
+		setInterval(function () { updateTransaction(hwStat); }, 2000);
 
-		initFloorSelect();
+
+		/*initFloorSelect();
 		var xx = document.getElementById("floorSelect");
 		var script = document.createElement("script");
 		script.src = xx.value;
@@ -27,7 +30,9 @@
 		head.appendChild(script);
 		script.onload = function () {
 			drawFloor(floor, canvasId);
-		};
+		};*/
+		var id = "5825687a-39f9-40cd-8fc6-ce6c2397b0cf";
+		getFloor(id, drawFloor, canvasId);
 
 		function initFloorSelect() {
 			var fNames = ["master-floor", "ground-floor", "floor-2-8", "floor-9"];
@@ -52,9 +57,10 @@
 			});
 		}
 		function drawFloor(floor, canvasId) {
+			//function drawFloor(floor, canvasId) {
 			var canvas = document.getElementById(canvasId);
 			var slotMap = new Image();
-			slotMap.src = floor.mapImage.url;
+			slotMap.src = floor.floor_map_image.url;
 
 			slotMap.onload = function () {
 				canvas.width = slotMap.width;
@@ -67,7 +73,7 @@
 				var ctx = canvas.getContext('2d');
 				ctx.globalCompositeOperation = 'destination-over';
 				ctx.clearRect(0, 0, canvas.width, canvas.height); // clear canvas
-				drawPatch(canvas, floor.parkingPatches, floor.mapImage);
+				drawPatch(canvas, floor.parking_spot_segments, floor.floor_map_image);
 				ctx.drawImage(slotMap, 0, 0);
 				window.requestAnimationFrame(draw);
 			}
@@ -81,24 +87,24 @@
 		document.body.onkeydown = function (e) {
 			keyBank.push(e.key);
 			console.log(e.key);
-			var data = floor.parkingPatches[floor.parkingPatches.length - 1];
+			var data = floor.parking_spot_segments[floor.parking_spot_segments.length - 1];
 			if (data != undefined) {
 				//move 5 cm to each dir
 				var dDeg = m2Deg((keyBank.length == 2 && keyBank.indexOf("Shift") > -1) ? .05 : 0.5);
 				var turnAngle = 0;
 				if (e.key == "ArrowUp") {
-					turnAngle = floor.mapImage.bearing;
+					turnAngle = floor.floor_map_image.bearing;
 				} else if (e.key == "ArrowDown") {
-					turnAngle = floor.mapImage.bearing + 180;
+					turnAngle = floor.floor_map_image.bearing + 180;
 				} else if (e.key == "ArrowLeft") {
-					turnAngle = floor.mapImage.bearing + 270;
+					turnAngle = floor.floor_map_image.bearing + 270;
 				} else if (e.key == "ArrowRight") {
-					turnAngle = floor.mapImage.bearing + 90;
+					turnAngle = floor.floor_map_image.bearing + 90;
 				}
 				if (e.key == "ArrowUp" || e.key == "ArrowDown" || e.key == "ArrowLeft" || e.key == "ArrowRight") {
 					data.center_latitude += dDeg * Math.cos(turnAngle / 180 * Math.PI);
 					data.center_longitude += dDeg * Math.sin(turnAngle / 180 * Math.PI);
-					floor.parkingPatches[floor.parkingPatches.length - 1] = data;
+					floor.parking_spot_segments[floor.parking_spot_segments.length - 1] = data;
 				}
 			}
 		};
@@ -120,18 +126,18 @@
 			ctx.stroke();
 
 			console.log(dx, dy);
-			var d = m2Deg(Math.sqrt(dx * dx + dy * dy) / floor.mapImage.pixelPerMeter); //in degree
-			console.log(Math.sqrt(dx * dx + dy * dy), Math.sqrt(dx * dx + dy * dy) / floor.mapImage.pixelPerMeter, d);
+			var d = m2Deg(Math.sqrt(dx * dx + dy * dy) / floor.floor_map_image.pixelPerMeter); //in degree
+			console.log(Math.sqrt(dx * dx + dy * dy), Math.sqrt(dx * dx + dy * dy) / floor.floor_map_image.pixelPerMeter, d);
 			var ang = Math.atan2(-dy, dx);
-			var deltaLat = d * Math.sin(ang - floor.mapImage.bearing / 180 * Math.PI);
-			var deltaLong = d * Math.cos(ang - floor.mapImage.bearing / 180 * Math.PI);
+			var deltaLat = d * Math.sin(ang - floor.floor_map_image.bearing / 180 * Math.PI);
+			var deltaLong = d * Math.cos(ang - floor.floor_map_image.bearing / 180 * Math.PI);
 			var spot = document.getElementById("nSpot").value;
 			var newSection = {
-				id: "",
-				center_latitude: floor.mapImage.center_latitude + deltaLat,
-				center_longitude: floor.mapImage.center_longitude + deltaLong,
+				parking_patch_id: "",
+				center_latitude: floor.floor_map_image.center_latitude + deltaLat,
+				center_longitude: floor.floor_map_image.center_longitude + deltaLong,
 				elevation: "0",
-				theta: floor.mapImage.bearing + 90,
+				theta: floor.floor_map_image.bearing + 90,
 				phi: "0",
 				alpha: "0",
 				width: "5", // m
@@ -142,7 +148,7 @@
 				parkingSpots: [parkingSpot],
 			};
 			console.log(JSON.stringify(newSection));
-			floor.parkingPatches = floor.parkingPatches.concat([newSection]);
+			floor.parking_spot_segments = floor.parking_spot_segments.concat([newSection]);
 		}
 	</script>
 

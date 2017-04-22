@@ -579,8 +579,8 @@ var parkingPatch = [
 var mapImage = {
     "floor_map_image_id": "",
     "url": "./floor-2-8.png",
-    "center_latitude": 13.739061746446605 - m2Deg(.25),
-    "center_longitude": 100.5609419761615 - m2Deg(0),
+    "center_latitude": 13.739061746446605 - 0.000002247951173614341,
+    "center_longitude": 100.5609419761615 ,
     "pixelPerMeter": 10.2066442700895,
     "bearing": -84
 };
